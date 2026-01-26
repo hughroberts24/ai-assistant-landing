@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Assistant - Your Personal AI, Right in Your Texts</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0a0a0f;
+      color: #ffffff;
+      line-height: 1.6;
+    }
+
+    .gradient-bg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: 
+        radial-gradient(ellipse at 20% 20%, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 80%, rgba(139, 92, 246, 0.15) 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 50%, rgba(59, 130, 246, 0.1) 0%, transparent 70%);
+      z-index: -1;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* Navigation */
+    nav {
+      padding: 24px 0;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      background: rgba(10, 10, 15, 0.8);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    nav .container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      font-size: 1.5rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #818cf8, #c084fc);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .nav-cta {
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      color: white;
+      padding: 10px 24px;
+      border-radius: 100px;
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 0.95rem;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .nav-cta:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 40px rgba(99, 102, 241, 0.4);
+    }
+
+    /* Hero Section */
+    .hero {
+      padding: 160px 0 100px;
+      text-align: center;
+    }
+
+    .badge {
+      display: inline-block;
+      background: rgba(99, 102, 241, 0.1);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      padding: 8px 16px;
+      border-radius: 100px;
+      font-size: 0.85rem;
+      color: #a5b4fc;
+      margin-bottom: 24px;
+    }
+
+    .hero h1 {
+      font-size: clamp(2.5rem, 6vw, 4rem);
+      font-weight: 700;
+      line-height: 1.1;
+      margin-bottom: 24px;
+      background: linear-gradient(135deg, #ffffff 0%, #a5b4fc 50%, #c084fc 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero p {
+      font-size: 1.25rem;
+      color: #94a3b8;
+      max-width: 600px;
+      margin: 0 auto 40px;
+    }
+
+    .cta-group {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      color: white;
+      padding: 16px 32px;
+      border-radius: 100px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 1.1rem;
+      transition: transform 0.2s, box-shadow 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 20px 60px rgba(99, 102, 241, 0.4);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: white;
+      padding: 16px 32px;
+      border-radius: 100px;
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 1.1rem;
+      transition: background 0.2s;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    /* Phone mockup */
+    .phone-mockup {
+      margin: 60px auto 0;
+      max-width: 320px;
+      background: #1a1a2e;
+      border-radius: 40px;
+      padding: 12px;
+      box-shadow: 
+        0 50px 100px rgba(0, 0, 0, 0.5),
+        0 0 0 1px rgba(255, 255, 255, 0.1);
+    }
+
+    .phone-screen {
+      background: #0f0f1a;
+      border-radius: 32px;
+      padding: 20px;
+      min-height: 400px;
+    }
+
+    .phone-header {
+      text-align: center;
+      padding-bottom: 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      margin-bottom: 16px;
+    }
+
+    .phone-header span {
+      color: #64748b;
+      font-size: 0.85rem;
+    }
+
+    .chat-bubble {
+      padding: 12px 16px;
+      border-radius: 18px;
+      margin-bottom: 8px;
+      max-width: 85%;
+      font-size: 0.95rem;
+    }
+
+    .chat-bubble.user {
+      background: #6366f1;
+      margin-left: auto;
+      border-bottom-right-radius: 6px;
+    }
+
+    .chat-bubble.ai {
+      background: #1e293b;
+      border-bottom-left-radius: 6px;
+    }
+
+    /* Features */
+    .features {
+      padding: 100px 0;
+    }
+
+    .features h2 {
+      text-align: center;
+      font-size: 2.5rem;
+      margin-bottom: 60px;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 24px;
+    }
+
+    .feature-card {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 20px;
+      padding: 32px;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+
+    .feature-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(99, 102, 241, 0.3);
+    }
+
+    .feature-icon {
+      font-size: 2.5rem;
+      margin-bottom: 16px;
+    }
+
+    .feature-card h3 {
+      font-size: 1.25rem;
+      margin-bottom: 8px;
+    }
+
+    .feature-card p {
+      color: #64748b;
+      font-size: 0.95rem;
+    }
+
+    /* Pricing */
+    .pricing {
+      padding: 100px 0;
+    }
+
+    .pricing h2 {
+      text-align: center;
+      font-size: 2.5rem;
+      margin-bottom: 16px;
+    }
+
+    .pricing > p {
+      text-align: center;
+      color: #64748b;
+      margin-bottom: 60px;
+    }
+
+    .pricing-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 24px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .pricing-card {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 24px;
+      padding: 40px;
+    }
+
+    .pricing-card.featured {
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1));
+      border-color: rgba(99, 102, 241, 0.3);
+      position: relative;
+    }
+
+    .pricing-card.featured::before {
+      content: 'POPULAR';
+      position: absolute;
+      top: -12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      padding: 6px 16px;
+      border-radius: 100px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .pricing-card h3 {
+      font-size: 1.5rem;
+      margin-bottom: 8px;
+    }
+
+    .pricing-card .price {
+      font-size: 3rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .pricing-card .price span {
+      font-size: 1rem;
+      font-weight: 400;
+      color: #64748b;
+    }
+
+    .pricing-card ul {
+      list-style: none;
+      margin: 24px 0;
+    }
+
+    .pricing-card li {
+      padding: 8px 0;
+      color: #94a3b8;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .pricing-card li::before {
+      content: '✓';
+      color: #6366f1;
+      font-weight: 600;
+    }
+
+    .pricing-card .btn-primary,
+    .pricing-card .btn-secondary {
+      width: 100%;
+      justify-content: center;
+      margin-top: 16px;
+    }
+
+    /* How it works */
+    .how-it-works {
+      padding: 100px 0;
+    }
+
+    .how-it-works h2 {
+      text-align: center;
+      font-size: 2.5rem;
+      margin-bottom: 60px;
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 40px;
+      text-align: center;
+    }
+
+    .step-number {
+      width: 60px;
+      height: 60px;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin: 0 auto 20px;
+    }
+
+    .steps h3 {
+      margin-bottom: 8px;
+    }
+
+    .steps p {
+      color: #64748b;
+    }
+
+    /* CTA Section */
+    .final-cta {
+      padding: 100px 0;
+      text-align: center;
+    }
+
+    .final-cta h2 {
+      font-size: 2.5rem;
+      margin-bottom: 16px;
+    }
+
+    .final-cta p {
+      color: #64748b;
+      margin-bottom: 32px;
+      font-size: 1.1rem;
+    }
+
+    .phone-number {
+      font-size: 2rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #818cf8, #c084fc);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 24px;
+    }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      padding: 40px 0;
+      text-align: center;
+      color: #64748b;
+      font-size: 0.9rem;
+    }
+
+    footer a {
+      color: #94a3b8;
+      text-decoration: none;
+    }
+
+    /* Mobile */
+    @media (max-width: 640px) {
+      .hero {
+        padding: 140px 0 80px;
+      }
+
+      .cta-group {
+        flex-direction: column;
+        padding: 0 20px;
+      }
+
+      .btn-primary, .btn-secondary {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="gradient-bg"></div>
+
+  <nav>
+    <div class="container">
+      <div class="logo">✨ AI Assistant</div>
+      <a href="#pricing" class="nav-cta">Get Started</a>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <div class="container">
+      <span class="badge">🚀 No app download required</span>
+      <h1>Your Personal AI Assistant, Right in Your Texts</h1>
+      <p>Just text our number and get instant help with anything. No apps, no logins, no friction. It's like having a genius friend on speed dial.</p>
+      
+      <div class="cta-group">
+        <a href="sms:+1XXXXXXXXXX" class="btn-primary">
+          💬 Text Us Now
+        </a>
+        <a href="#how-it-works" class="btn-secondary">See How It Works</a>
+      </div>
+
+      <div class="phone-mockup">
+        <div class="phone-screen">
+          <div class="phone-header">
+            <span>AI Assistant</span>
+          </div>
+          <div class="chat-bubble user">What's a good recipe for dinner tonight?</div>
+          <div class="chat-bubble ai">How about a 20-min garlic butter shrimp pasta? 🍝 You'll need: shrimp, linguine, garlic, butter, white wine, parsley, and parmesan. Want the full recipe?</div>
+          <div class="chat-bubble user">Yes!</div>
+          <div class="chat-bubble ai">Here you go! Start by cooking the pasta...</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="features">
+    <div class="container">
+      <h2>What Can It Do?</h2>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">💡</div>
+          <h3>Answer Anything</h3>
+          <p>Get instant answers to questions, explanations of complex topics, or help with decisions.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">✍️</div>
+          <h3>Write & Edit</h3>
+          <p>Draft emails, texts, social posts, or polish up your writing. Just send it over.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🔍</div>
+          <h3>Research & Summarize</h3>
+          <p>Get quick summaries, compare options, or dive deep into any topic.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📅</div>
+          <h3>Plan & Organize</h3>
+          <p>Set reminders, plan trips, organize your thoughts, or brainstorm ideas.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🧮</div>
+          <h3>Math & Logic</h3>
+          <p>Work through calculations, analyze data, or solve problems step by step.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🎯</div>
+          <h3>Personalized Help</h3>
+          <p>Remembers your preferences and context. The more you chat, the more helpful it gets.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="how-it-works" class="how-it-works">
+    <div class="container">
+      <h2>How It Works</h2>
+      <div class="steps">
+        <div>
+          <div class="step-number">1</div>
+          <h3>Text Our Number</h3>
+          <p>Just send a message. No app to download, no account to create.</p>
+        </div>
+        <div>
+          <div class="step-number">2</div>
+          <h3>Ask Anything</h3>
+          <p>Questions, tasks, ideas—whatever you need help with.</p>
+        </div>
+        <div>
+          <div class="step-number">3</div>
+          <h3>Get Instant Help</h3>
+          <p>Receive thoughtful, helpful responses in seconds.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="pricing" class="pricing">
+    <div class="container">
+      <h2>Simple Pricing</h2>
+      <p>Start free. Upgrade when you're ready.</p>
+      
+      <div class="pricing-cards">
+        <div class="pricing-card">
+          <h3>Free</h3>
+          <div class="price">$0<span>/month</span></div>
+          <ul>
+            <li>20 messages per day</li>
+            <li>Basic AI responses</li>
+            <li>Works instantly</li>
+          </ul>
+          <a href="sms:+1XXXXXXXXXX" class="btn-secondary">Start Texting</a>
+        </div>
+        
+        <div class="pricing-card featured">
+          <h3>Pro</h3>
+          <div class="price">$9.99<span>/month</span></div>
+          <ul>
+            <li>Unlimited messages</li>
+            <li>Priority response times</li>
+            <li>Memory across conversations</li>
+            <li>Google Calendar integration</li>
+            <li>Image generation</li>
+            <li>Smart reminders</li>
+          </ul>
+          <a href="STRIPE_PAYMENT_LINK_PLACEHOLDER" class="btn-primary" id="upgrade-btn">Upgrade to Pro</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="final-cta">
+    <div class="container">
+      <h2>Ready to Try It?</h2>
+      <p>Send your first message and see the magic happen.</p>
+      <div class="phone-number">📱 +1 (XXX) XXX-XXXX</div>
+      <a href="sms:+1XXXXXXXXXX" class="btn-primary">💬 Start Texting Now</a>
+    </div>
+  </section>
+
+  <footer>
+    <div class="container">
+      <p>© 2026 AI Assistant. Made with 💜</p>
+      <p style="margin-top: 8px;">
+        <a href="/privacy">Privacy Policy</a> · <a href="/terms">Terms of Service</a>
+      </p>
+    </div>
+  </footer>
+</body>
+</html>
