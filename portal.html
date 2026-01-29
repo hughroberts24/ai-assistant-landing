@@ -211,8 +211,8 @@
                 <button class="btn" id="save-rules-btn">Save Rules</button>
             </div>
             <div class="card">
-                <h2>🔷 Google Workspace <span id="gcal-status" class="status disconnected">Not Connected</span></h2>
-                <p>Let Tars access your Calendar, Gmail, Docs, Sheets & Drive.</p>
+                <h2>📅 Google Workspace <span id="gcal-status" class="status disconnected">Not Connected</span></h2>
+                <p>Let Tars access Calendar, Gmail, Docs, Sheets & Drive.</p>
                 <button class="btn" id="gcal-btn">Connect Google Workspace</button>
             </div>
             <div class="card">
@@ -467,6 +467,7 @@
             }
             
             async function loadDashboard() {
+                checkUrlParams();
                 document.getElementById('login-screen').style.display = 'none';
                 document.getElementById('dashboard').classList.add('active');
                 document.getElementById('user-phone').textContent = currentUser.phone;
@@ -482,6 +483,7 @@
                     }
                 }
                 
+                checkIntegrations();
                 if (currentUser.id) {
                     const { data: prefs } = await db.from('preferences').select('*').eq('user_id', currentUser.id).single();
                     if (prefs && prefs.personality_rules) {
@@ -522,6 +524,51 @@
                 }
             }
             
+            function connectGoogle() {
+                if (!currentUser || !currentUser.phone) {
+                    showMessage('Please log in first', 'error');
+                    return;
+                }
+                window.location.href = 'http://62.210.193.63:3000/auth/google?phone=' + encodeURIComponent(currentUser.phone);
+            }
+            
+            async function checkIntegrations() {
+                if (!currentUser || !currentUser.phone) return;
+                try {
+                    const res = await fetch('http://62.210.193.63:3000/integrations', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ phone: currentUser.phone })
+                    });
+                    const data = await res.json();
+                    if (data.integrations) {
+                        data.integrations.forEach(function(int) {
+                            if (int.provider === 'google') {
+                                document.getElementById('gcal-status').textContent = 'Connected';
+                                document.getElementById('gcal-status').classList.remove('disconnected');
+                                document.getElementById('gcal-status').classList.add('connected');
+                                document.getElementById('gcal-btn').textContent = 'Connected as ' + (int.email || 'Google');
+                                document.getElementById('gcal-btn').disabled = true;
+                            }
+                        });
+                    }
+                } catch (err) {
+                    console.error('Failed to check integrations:', err);
+                }
+            }
+            
+            function checkUrlParams() {
+                const params = new URLSearchParams(window.location.search);
+                if (params.get('google') === 'connected') {
+                    showMessage('Google Workspace connected successfully! 🎉', 'success');
+                    window.history.replaceState({}, '', window.location.pathname);
+                }
+                if (params.get('error')) {
+                    showMessage('Connection failed: ' + params.get('error'), 'error');
+                    window.history.replaceState({}, '', window.location.pathname);
+                }
+            }
+            
             function logout() {
                 localStorage.removeItem('tars_user');
                 currentUser = null;
@@ -551,7 +598,7 @@
                 document.getElementById('save-name-btn').addEventListener('click', saveName);
                 document.getElementById('save-rules-btn').addEventListener('click', saveRules);
                 document.getElementById('gcal-btn').addEventListener('click', function() {
-                    showMessage('Google Workspace integration coming soon!', 'info');
+                    connectGoogle();
                 });
                 document.getElementById('github-btn').addEventListener('click', function() {
                     showMessage('GitHub integration coming soon!', 'info');
