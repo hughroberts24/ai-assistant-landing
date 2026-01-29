@@ -493,6 +493,27 @@
             }
             
             async function saveName() {
+                const name = document.getElementById("name-input").value.trim();
+                if (!name) return;
+                try {
+                    const res = await fetch("http://62.210.193.63:3000/save-user", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ phone: currentUser.phone, name: name })
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        document.getElementById("user-name").textContent = name;
+                        currentUser.name = name;
+                        showMessage("Name saved! Tars will call you " + name + " now.", "success");
+                    } else {
+                        showMessage("Error: " + data.error, "error");
+                    }
+                } catch (err) {
+                    showMessage("Failed to save name", "error");
+                }
+            }
+            async function saveNameOLD() {
                 const name = document.getElementById('name-input').value.trim();
                 if (!name || !db) return;
                 
@@ -506,6 +527,24 @@
             }
             
             async function saveRules() {
+                const rules = document.getElementById("rules-input").value;
+                try {
+                    const res = await fetch("http://62.210.193.63:3000/save-preferences", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ phone: currentUser.phone, personality_rules: rules })
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        showMessage("Rules saved! Tars will use these in your chats.", "success");
+                    } else {
+                        showMessage("Error: " + data.error, "error");
+                    }
+                } catch (err) {
+                    showMessage("Failed to save rules", "error");
+                }
+            }
+            async function saveRulesOLD() {
                 const rules = document.getElementById('rules-input').value;
                 if (!db || !currentUser.id) {
                     showMessage('Please save your name first', 'info');
