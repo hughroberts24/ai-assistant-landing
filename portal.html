@@ -472,48 +472,43 @@
                 document.getElementById('dashboard').classList.add('active');
                 document.getElementById('user-phone').textContent = currentUser.phone;
                 
-                if (!db) return;
-                
-                const { data: user } = await db.from('users').select('*').eq('phone', currentUser.phone).single();
-                if (user) {
-                    currentUser = Object.assign({}, currentUser, user);
-                    if (user.name) {
-                        document.getElementById('user-name').textContent = user.name;
-                        document.getElementById('name-input').value = user.name;
+                // Load user data from auth server
+                try {
+                    const res = await fetch('http://62.210.193.63:3000/get-user', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ phone: currentUser.phone })
+                    });
+                    const data = await res.json();
+                    
+                    if (data.name) {
+                        document.getElementById('user-name').textContent = data.name;
+                        document.getElementById('name-input').value = data.name;
+                        currentUser.name = data.name;
                     }
-                }
-                
-                checkIntegrations();
-                if (currentUser.id) {
-                    const { data: prefs } = await db.from('preferences').select('*').eq('user_id', currentUser.id).single();
-                    if (prefs && prefs.personality_rules) {
-                        document.getElementById('rules-input').value = prefs.personality_rules;
+                    
+                    if (data.personality_rules) {
+                        document.getElementById('rules-input').value = data.personality_rules;
                     }
+                    
+                    // Check integrations
+                    if (data.integrations) {
+                        data.integrations.forEach(function(int) {
+                            if (int.provider === 'google') {
+                                document.getElementById('gcal-status').textContent = 'Connected';
+                                document.getElementById('gcal-status').classList.remove('disconnected');
+                                document.getElementById('gcal-status').classList.add('connected');
+                                document.getElementById('gcal-btn').textContent = 'Connected as ' + (int.email || 'Google');
+                                document.getElementById('gcal-btn').disabled = true;
+                            }
+                        });
+                    }
+                } catch (err) {
+                    console.error('Failed to load user data:', err);
                 }
             }
             
             async function saveName() {
-                const name = document.getElementById("name-input").value.trim();
-                if (!name) return;
-                try {
-                    const res = await fetch("http://62.210.193.63:3000/save-user", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ phone: currentUser.phone, name: name })
-                    });
-                    const data = await res.json();
-                    if (data.success) {
-                        document.getElementById("user-name").textContent = name;
-                        currentUser.name = name;
-                        showMessage("Name saved! Tars will call you " + name + " now.", "success");
-                    } else {
-                        showMessage("Error: " + data.error, "error");
-                    }
-                } catch (err) {
-                    showMessage("Failed to save name", "error");
-                }
-            }
-            async function saveNameOLD() {
                 const name = document.getElementById('name-input').value.trim();
                 if (!name || !db) return;
                 
@@ -527,24 +522,6 @@
             }
             
             async function saveRules() {
-                const rules = document.getElementById("rules-input").value;
-                try {
-                    const res = await fetch("http://62.210.193.63:3000/save-preferences", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ phone: currentUser.phone, personality_rules: rules })
-                    });
-                    const data = await res.json();
-                    if (data.success) {
-                        showMessage("Rules saved! Tars will use these in your chats.", "success");
-                    } else {
-                        showMessage("Error: " + data.error, "error");
-                    }
-                } catch (err) {
-                    showMessage("Failed to save rules", "error");
-                }
-            }
-            async function saveRulesOLD() {
                 const rules = document.getElementById('rules-input').value;
                 if (!db || !currentUser.id) {
                     showMessage('Please save your name first', 'info');
