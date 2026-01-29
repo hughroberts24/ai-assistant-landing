@@ -1,638 +1,828 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tars - Your AI Assistant Portal</title>
-    <link rel="icon" type="image/svg+xml" href="favicon.svg">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-            min-height: 100vh;
-            color: #fff;
-        }
-        .container { max-width: 600px; margin: 0 auto; padding: 2rem; }
-        .login-screen { 
-            min-height: 100vh; 
-            display: flex; 
-            flex-direction: column; 
-            justify-content: center; 
-            align-items: center;
-            text-align: center;
-            padding: 2rem;
-        }
-        .login-screen h1 { font-size: 3rem; margin-bottom: 0.5rem; }
-        .login-screen .subtitle { color: #94a3b8; margin-bottom: 2rem; font-size: 1.1rem; }
-        .login-box {
-            background: rgba(255,255,255,0.05);
-            border-radius: 16px;
-            padding: 2rem;
-            width: 100%;
-            max-width: 400px;
-            border: 1px solid rgba(255,255,255,0.1);
-        }
-        .login-box h2 { margin-bottom: 1rem; font-size: 1.3rem; }
-        .input-group { margin-bottom: 1rem; }
-        .input-group label { display: block; margin-bottom: 0.5rem; color: #94a3b8; font-size: 0.9rem; }
-        .input-group input {
-            width: 100%;
-            padding: 0.875rem 1rem;
-            border-radius: 8px;
-            border: 1px solid rgba(255,255,255,0.2);
-            background: rgba(0,0,0,0.3);
-            color: #fff;
-            font-size: 1rem;
-            text-align: center;
-            letter-spacing: 0.2em;
-        }
-        .input-group input:focus { outline: none; border-color: #6366f1; }
-        .btn {
-            display: inline-block;
-            background: #6366f1;
-            color: #fff;
-            padding: 0.875rem 1.5rem;
-            border-radius: 8px;
-            border: none;
-            font-size: 1rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
-            width: 100%;
-        }
-        .btn:hover:not(:disabled) { background: #4f46e5; transform: translateY(-1px); }
-        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-        .btn-secondary { background: rgba(255,255,255,0.1); margin-top: 0.5rem; }
-        .btn-secondary:hover:not(:disabled) { background: rgba(255,255,255,0.2); }
-        .btn-link { 
-            background: none; 
-            color: #94a3b8; 
-            text-decoration: underline;
-            font-size: 0.9rem;
-            margin-top: 1rem;
-            padding: 0.5rem;
-        }
-        .btn-link:hover { color: #fff; }
-        .dashboard { display: none; }
-        .dashboard.active { display: block; }
-        .header { 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            margin-bottom: 2rem;
-            padding-bottom: 1rem;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-        }
-        .header h1 { font-size: 1.8rem; }
-        .user-info { color: #94a3b8; font-size: 0.9rem; }
-        .logout-btn { 
-            background: transparent; 
-            border: 1px solid rgba(255,255,255,0.2);
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
-            color: #fff;
-            cursor: pointer;
-            font-size: 0.85rem;
-        }
-        .logout-btn:hover { background: rgba(255,255,255,0.1); }
-        .card {
-            background: rgba(255,255,255,0.05);
-            border-radius: 12px;
-            padding: 1.5rem;
-            margin-bottom: 1rem;
-            border: 1px solid rgba(255,255,255,0.1);
-        }
-        .card h2 { font-size: 1.2rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem; }
-        .card p { color: #94a3b8; margin-bottom: 1rem; font-size: 0.95rem; }
-        .status { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.8rem; margin-left: 0.5rem; }
-        .status.connected { background: #059669; }
-        .status.disconnected { background: #4b5563; }
-        textarea {
-            width: 100%;
-            padding: 1rem;
-            border-radius: 8px;
-            border: 1px solid rgba(255,255,255,0.2);
-            background: rgba(0,0,0,0.3);
-            color: #fff;
-            font-family: inherit;
-            font-size: 0.95rem;
-            resize: vertical;
-            min-height: 120px;
-            margin-bottom: 1rem;
-        }
-        textarea:focus { outline: none; border-color: #6366f1; }
-        .message {
-            padding: 0.75rem 1rem;
-            border-radius: 8px;
-            margin-bottom: 1rem;
-            font-size: 0.9rem;
-        }
-        .message.success { background: rgba(5, 150, 105, 0.2); border: 1px solid #059669; }
-        .message.error { background: rgba(220, 38, 38, 0.2); border: 1px solid #dc2626; }
-        .message.info { background: rgba(59, 130, 246, 0.2); border: 1px solid #3b82f6; }
-        .message.warning { background: rgba(245, 158, 11, 0.2); border: 1px solid #f59e0b; }
-        .hidden { display: none !important; }
-        .timer { color: #94a3b8; font-size: 0.85rem; margin-top: 0.5rem; }
-        .resend-area { margin-top: 1rem; text-align: center; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tars - Your Settings</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #0a0a0f;
+      color: #ffffff;
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    .container {
+      max-width: 480px;
+      margin: 0 auto;
+    }
+
+    .header {
+      text-align: center;
+      padding: 40px 0;
+    }
+
+    .header h1 {
+      font-size: 1.75rem;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, #818cf8, #c084fc);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .header p {
+      color: #64748b;
+      font-size: 0.95rem;
+    }
+
+    .user-info {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .user-avatar {
+      width: 48px;
+      height: 48px;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+    }
+
+    .user-details h3 {
+      font-size: 1rem;
+      margin-bottom: 4px;
+    }
+
+    .user-details p {
+      color: #64748b;
+      font-size: 0.85rem;
+    }
+
+    .plan-badge {
+      margin-left: auto;
+      background: rgba(99, 102, 241, 0.2);
+      color: #a5b4fc;
+      padding: 6px 12px;
+      border-radius: 100px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .plan-badge.pro {
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      color: white;
+    }
+
+    .section-title {
+      font-size: 0.85rem;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 16px;
+      padding-left: 4px;
+    }
+
+    .integrations {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+
+    .integration-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 16px;
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      transition: border-color 0.2s;
+    }
+
+    .integration-card:hover {
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .integration-card.connected {
+      border-color: rgba(34, 197, 94, 0.3);
+      background: rgba(34, 197, 94, 0.05);
+    }
+
+    .integration-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+    }
+
+    .integration-icon.google {
+      background: linear-gradient(135deg, #ea4335, #fbbc04, #34a853, #4285f4);
+    }
+
+    .integration-icon.github {
+      background: #1a1a2e;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .integration-icon.calendar {
+      background: linear-gradient(135deg, #4285f4, #34a853);
+    }
+
+    .integration-icon.images {
+      background: linear-gradient(135deg, #ff6b6b, #feca57);
+    }
+
+    .integration-info {
+      flex: 1;
+    }
+
+    .integration-info h3 {
+      font-size: 1rem;
+      margin-bottom: 4px;
+    }
+
+    .integration-info p {
+      color: #64748b;
+      font-size: 0.85rem;
+    }
+
+    .integration-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.8rem;
+      color: #64748b;
+      margin-top: 6px;
+    }
+
+    .integration-status.connected {
+      color: #22c55e;
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #64748b;
+    }
+
+    .status-dot.connected {
+      background: #22c55e;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border-radius: 100px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+      text-decoration: none;
+      display: inline-block;
+    }
+
+    .btn-connect {
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      color: white;
+    }
+
+    .btn-connect:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 24px rgba(99, 102, 241, 0.4);
+    }
+
+    .btn-disconnect {
+      background: rgba(239, 68, 68, 0.1);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.2);
+    }
+
+    .btn-disconnect:hover {
+      background: rgba(239, 68, 68, 0.2);
+    }
+
+    .capabilities {
+      margin-bottom: 32px;
+    }
+
+    .capability-card {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 8px;
+    }
+
+    .capability-card h4 {
+      font-size: 0.9rem;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .capability-card p {
+      color: #64748b;
+      font-size: 0.8rem;
+      padding-left: 24px;
+    }
+
+    .help-text {
+      text-align: center;
+      padding: 32px 0;
+      color: #64748b;
+      font-size: 0.9rem;
+    }
+
+    .help-text a {
+      color: #818cf8;
+      text-decoration: none;
+    }
+
+    /* Personality Section */
+    .personality-section {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .personality-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 16px;
+      padding: 24px;
+    }
+
+    .personality-card h3 {
+      margin-bottom: 20px;
+      font-size: 1.1rem;
+    }
+
+    .slider-group {
+      margin-bottom: 24px;
+    }
+
+    .slider-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 0.9rem;
+      color: #94a3b8;
+    }
+
+    .slider-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      color: #64748b;
+      margin-bottom: 8px;
+    }
+
+    .slider {
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      background: rgba(255, 255, 255, 0.1);
+      outline: none;
+      -webkit-appearance: none;
+    }
+
+    .slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4);
+    }
+
+    .toggle-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .toggle-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      cursor: pointer;
+    }
+
+    .toggle-item:last-child {
+      border-bottom: none;
+    }
+
+    .toggle-item input {
+      display: none;
+    }
+
+    .toggle-switch {
+      width: 44px;
+      height: 24px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      position: relative;
+      transition: background 0.2s;
+    }
+
+    .toggle-switch::after {
+      content: '';
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      background: white;
+      border-radius: 50%;
+      top: 3px;
+      left: 3px;
+      transition: transform 0.2s;
+    }
+
+    .toggle-item input:checked + .toggle-switch {
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    }
+
+    .toggle-item input:checked + .toggle-switch::after {
+      transform: translateX(20px);
+    }
+
+    .helper-text {
+      font-size: 0.85rem;
+      color: #64748b;
+      margin-bottom: 12px;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 100px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 12px;
+      color: white;
+      font-family: inherit;
+      font-size: 0.9rem;
+      resize: vertical;
+      margin-bottom: 16px;
+    }
+
+    textarea:focus {
+      outline: none;
+      border-color: rgba(99, 102, 241, 0.5);
+    }
+
+    textarea::placeholder {
+      color: #64748b;
+    }
+
+    .save-btn {
+      width: 100%;
+    }
+
+    /* Loading state */
+    .loading {
+      opacity: 0.5;
+      pointer-events: none;
+    }
+
+    /* Error handling */
+    .error-message {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      color: #f87171;
+      padding: 16px;
+      border-radius: 12px;
+      margin-bottom: 24px;
+      text-align: center;
+    }
+
+    /* Success message */
+    .success-message {
+      background: rgba(34, 197, 94, 0.1);
+      border: 1px solid rgba(34, 197, 94, 0.2);
+      color: #22c55e;
+      padding: 16px;
+      border-radius: 12px;
+      margin-bottom: 24px;
+      text-align: center;
+    }
+
+    @media (max-width: 400px) {
+      body {
+        padding: 16px;
+      }
+
+      .integration-card {
+        flex-wrap: wrap;
+      }
+
+      .btn {
+        width: 100%;
+        text-align: center;
+        margin-top: 12px;
+      }
+    }
+  </style>
 </head>
 <body>
-    <div id="login-screen" class="login-screen">
-        <h1>🤖 Tars</h1>
-        <p class="subtitle">Your AI Assistant Portal</p>
-        <div class="login-box">
-            <div id="phone-step">
-                <h2>Sign in with your phone</h2>
-                <p style="color: #94a3b8; margin-bottom: 1rem; font-size: 0.9rem;">
-                    Enter the phone number you use to text Tars
-                </p>
-                <div class="input-group">
-                    <label>Phone Number</label>
-                    <input type="tel" id="phone-input" placeholder="(555) 123-4567" style="letter-spacing: normal; text-align: left;">
-                </div>
-                <div id="phone-error" class="message error hidden"></div>
-                <button class="btn" id="send-code-btn">Send Verification Code</button>
-            </div>
-            <div id="code-step" class="hidden">
-                <h2>Check your messages! 💬</h2>
-                <p style="color: #94a3b8; margin-bottom: 1rem; font-size: 0.9rem;">
-                    Tars just texted you a 6-digit code
-                </p>
-                <div class="input-group">
-                    <label>Verification Code</label>
-                    <input type="text" id="code-input" placeholder="000000" maxlength="6" autocomplete="one-time-code">
-                </div>
-                <div id="code-error" class="message error hidden"></div>
-                <button class="btn" id="verify-btn">Verify & Sign In</button>
-                <div class="resend-area">
-                    <button class="btn btn-link" id="resend-btn" disabled>Resend code</button>
-                    <div id="resend-timer" class="timer"></div>
-                </div>
-                <button class="btn btn-secondary" id="back-btn">← Use different number</button>
-            </div>
-            <div id="cooldown-step" class="hidden">
-                <h2>⏳ Please wait</h2>
-                <p style="color: #94a3b8; margin-bottom: 1rem; font-size: 0.9rem;">
-                    Too many attempts. You can try again in:
-                </p>
-                <div id="cooldown-timer" style="font-size: 2rem; font-weight: bold; margin: 1rem 0;"></div>
-                <button class="btn btn-secondary" id="cooldown-back-btn">← Go back</button>
-            </div>
-        </div>
-    </div>
-    
-    <div id="dashboard" class="dashboard">
-        <div class="container">
-            <div class="header">
-                <div>
-                    <h1>Hey, <span id="user-name">there</span>! 👋</h1>
-                    <p class="user-info" id="user-phone"></p>
-                </div>
-                <button class="logout-btn" id="logout-btn">Sign Out</button>
-            </div>
-            <div id="message-area"></div>
-            <div class="card">
-                <h2>👤 Your Profile</h2>
-                <p>What should Tars call you?</p>
-                <div class="input-group">
-                    <input type="text" id="name-input" placeholder="Your name" style="letter-spacing: normal; text-align: left;">
-                </div>
-                <button class="btn" id="save-name-btn">Save Name</button>
-            </div>
-            <div class="card">
-                <h2>✨ Personality Rules</h2>
-                <p>Customize how Tars talks to you.</p>
-                <textarea id="rules-input" placeholder="Examples:
-• Always be super concise
-• I'm a software engineer
-• Call me 'boss'"></textarea>
-                <button class="btn" id="save-rules-btn">Save Rules</button>
-            </div>
-            <div class="card">
-                <h2>📅 Google Workspace <span id="gcal-status" class="status disconnected">Not Connected</span></h2>
-                <p>Let Tars access Calendar, Gmail, Docs, Sheets & Drive.</p>
-                <button class="btn" id="gcal-btn">Connect Google Workspace</button>
-            </div>
-            <div class="card">
-                <h2>🐙 GitHub <span id="github-status" class="status disconnected">Not Connected</span></h2>
-                <p>Let Tars help with code.</p>
-                <button class="btn" id="github-btn">Connect GitHub</button>
-            </div>
-        </div>
+  <div class="container">
+    <div class="header">
+      <h1>✨ Tars Settings</h1>
+      <p>Manage your connected accounts</p>
     </div>
 
-    <script>
-        (function() {
-            const AUTH_API = 'http://62.210.193.63:3000';
-            const SUPABASE_URL = 'https://uqkcpbtpwwhamrqivudj.supabase.co';
-            const SUPABASE_ANON_KEY = 'sb_publishable_ESkDkX8sh2zMi3-8j_8jmA_i4AiAqty';
-            
-            let db = null;
-            let currentUser = null;
-            let resendTimer = null;
-            let cooldownTimer = null;
-            
-            function formatPhone(phone) {
-                const digits = phone.replace(/\D/g, '');
-                return '+' + (digits.startsWith('1') ? digits : '1' + digits);
-            }
-            
-            function showMessage(text, type) {
-                const area = document.getElementById('message-area');
-                if (area) {
-                    area.innerHTML = '<div class="message ' + type + '">' + text + '</div>';
-                    setTimeout(function() { area.innerHTML = ''; }, 4000);
-                }
-            }
-            
-            function formatTime(seconds) {
-                const mins = Math.floor(seconds / 60);
-                const secs = seconds % 60;
-                if (mins > 0) {
-                    return mins + ':' + (secs < 10 ? '0' : '') + secs;
-                }
-                return secs + 's';
-            }
-            
-            function startResendTimer(seconds) {
-                const btn = document.getElementById('resend-btn');
-                const timer = document.getElementById('resend-timer');
-                btn.disabled = true;
-                
-                let remaining = seconds;
-                timer.textContent = 'Resend available in ' + formatTime(remaining);
-                
-                if (resendTimer) clearInterval(resendTimer);
-                resendTimer = setInterval(function() {
-                    remaining--;
-                    if (remaining <= 0) {
-                        clearInterval(resendTimer);
-                        btn.disabled = false;
-                        timer.textContent = '';
-                    } else {
-                        timer.textContent = 'Resend available in ' + formatTime(remaining);
-                    }
-                }, 1000);
-            }
-            
-            function showCooldown(seconds) {
-                document.getElementById('phone-step').classList.add('hidden');
-                document.getElementById('code-step').classList.add('hidden');
-                document.getElementById('cooldown-step').classList.remove('hidden');
-                
-                let remaining = seconds;
-                const timer = document.getElementById('cooldown-timer');
-                timer.textContent = formatTime(remaining);
-                
-                if (cooldownTimer) clearInterval(cooldownTimer);
-                cooldownTimer = setInterval(function() {
-                    remaining--;
-                    if (remaining <= 0) {
-                        clearInterval(cooldownTimer);
-                        backToPhone();
-                    } else {
-                        timer.textContent = formatTime(remaining);
-                    }
-                }, 1000);
-            }
-            
-            async function sendCode() {
-                const phone = document.getElementById('phone-input').value;
-                const btn = document.getElementById('send-code-btn');
-                const errorEl = document.getElementById('phone-error');
-                
-                if (phone.replace(/\D/g, '').length < 10) {
-                    errorEl.textContent = 'Please enter a valid 10-digit phone number';
-                    errorEl.classList.remove('hidden');
-                    return;
-                }
-                
-                errorEl.classList.add('hidden');
-                btn.disabled = true;
-                btn.textContent = 'Sending...';
-                
-                try {
-                    const res = await fetch(AUTH_API + '/send-code', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ phone: formatPhone(phone) })
-                    });
-                    
-                    const data = await res.json();
-                    
-                    if (data.cooldown) {
-                        showCooldown(data.secondsLeft);
-                        return;
-                    }
-                    
-                    if (data.resendDelay) {
-                        errorEl.textContent = 'Please wait ' + data.secondsLeft + ' seconds before requesting another code.';
-                        errorEl.classList.remove('hidden');
-                        return;
-                    }
-                    
-                    if (data.success) {
-                        document.getElementById('phone-step').classList.add('hidden');
-                        document.getElementById('code-step').classList.remove('hidden');
-                        document.getElementById('code-input').focus();
-                        startResendTimer(data.resendAvailableIn || 30);
-                    } else {
-                        throw new Error(data.error || 'Failed to send code');
-                    }
-                } catch (err) {
-                    errorEl.textContent = err.message;
-                    errorEl.classList.remove('hidden');
-                } finally {
-                    btn.disabled = false;
-                    btn.textContent = 'Send Verification Code';
-                }
-            }
-            
-            async function resendCode() {
-                const phone = document.getElementById('phone-input').value;
-                const btn = document.getElementById('resend-btn');
-                const errorEl = document.getElementById('code-error');
-                
-                btn.disabled = true;
-                btn.textContent = 'Sending...';
-                
-                try {
-                    const res = await fetch(AUTH_API + '/send-code', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ phone: formatPhone(phone) })
-                    });
-                    
-                    const data = await res.json();
-                    
-                    if (data.cooldown) {
-                        showCooldown(data.secondsLeft);
-                        return;
-                    }
-                    
-                    if (data.success) {
-                        errorEl.textContent = 'New code sent!';
-                        errorEl.classList.remove('hidden');
-                        errorEl.classList.remove('error');
-                        errorEl.classList.add('success');
-                        startResendTimer(data.resendAvailableIn || 30);
-                        setTimeout(function() {
-                            errorEl.classList.add('hidden');
-                            errorEl.classList.remove('success');
-                            errorEl.classList.add('error');
-                        }, 3000);
-                    } else {
-                        throw new Error(data.error);
-                    }
-                } catch (err) {
-                    errorEl.textContent = err.message;
-                    errorEl.classList.remove('hidden');
-                } finally {
-                    btn.textContent = 'Resend code';
-                }
-            }
-            
-            async function verifyCode() {
-                const phone = formatPhone(document.getElementById('phone-input').value);
-                const code = document.getElementById('code-input').value.trim();
-                const btn = document.getElementById('verify-btn');
-                const errorEl = document.getElementById('code-error');
-                
-                if (code.length !== 6 || !/^\d+$/.test(code)) {
-                    errorEl.textContent = 'Please enter the 6-digit code';
-                    errorEl.classList.remove('hidden');
-                    return;
-                }
-                
-                errorEl.classList.add('hidden');
-                btn.disabled = true;
-                btn.textContent = 'Verifying...';
-                
-                try {
-                    const res = await fetch(AUTH_API + '/verify-code', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ phone: phone, code: code })
-                    });
-                    
-                    const data = await res.json();
-                    
-                    if (data.cooldown) {
-                        showCooldown(data.secondsLeft);
-                        return;
-                    }
-                    
-                    if (data.success) {
-                        currentUser = { phone: data.phone };
-                        localStorage.setItem('tars_user', JSON.stringify(currentUser));
-                        await ensureUser(data.phone);
-                        loadDashboard();
-                    } else {
-                        errorEl.textContent = data.error || 'Invalid code';
-                        errorEl.classList.remove('hidden');
-                        if (data.attemptsLeft !== undefined) {
-                            errorEl.textContent += ' (' + data.attemptsLeft + ' attempts left)';
-                        }
-                    }
-                } catch (err) {
-                    errorEl.textContent = err.message;
-                    errorEl.classList.remove('hidden');
-                } finally {
-                    btn.disabled = false;
-                    btn.textContent = 'Verify & Sign In';
-                }
-            }
-            
-            function backToPhone() {
-                if (resendTimer) clearInterval(resendTimer);
-                if (cooldownTimer) clearInterval(cooldownTimer);
-                document.getElementById('phone-step').classList.remove('hidden');
-                document.getElementById('code-step').classList.add('hidden');
-                document.getElementById('cooldown-step').classList.add('hidden');
-                document.getElementById('code-input').value = '';
-                document.getElementById('code-error').classList.add('hidden');
-            }
-            
-            async function ensureUser(phone) {
-                if (!db) return;
-                const { data: existing } = await db.from('users').select('*').eq('phone', phone).single();
-                if (!existing) {
-                    const { data: newUser } = await db.from('users').insert({ phone: phone }).select().single();
-                    currentUser = newUser || { phone: phone };
-                } else {
-                    currentUser = existing;
-                }
-            }
-            
-            async function loadDashboard() {
-                checkUrlParams();
-                document.getElementById('login-screen').style.display = 'none';
-                document.getElementById('dashboard').classList.add('active');
-                document.getElementById('user-phone').textContent = currentUser.phone;
-                
-                // Load user data from auth server
-                try {
-                    const res = await fetch('http://62.210.193.63:3000/get-user', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ phone: currentUser.phone })
-                    });
-                    const data = await res.json();
-                    
-                    if (data.name) {
-                        document.getElementById('user-name').textContent = data.name;
-                        document.getElementById('name-input').value = data.name;
-                        currentUser.name = data.name;
-                    }
-                    
-                    if (data.personality_rules) {
-                        document.getElementById('rules-input').value = data.personality_rules;
-                    }
-                    
-                    // Check integrations
-                    if (data.integrations) {
-                        data.integrations.forEach(function(int) {
-                            if (int.provider === 'google') {
-                                document.getElementById('gcal-status').textContent = 'Connected';
-                                document.getElementById('gcal-status').classList.remove('disconnected');
-                                document.getElementById('gcal-status').classList.add('connected');
-                                document.getElementById('gcal-btn').textContent = 'Connected as ' + (int.email || 'Google');
-                                document.getElementById('gcal-btn').disabled = true;
-                            }
-                        });
-                    }
-                } catch (err) {
-                    console.error('Failed to load user data:', err);
-                }
-            }
-            
-            async function saveName() {
-                const name = document.getElementById('name-input').value.trim();
-                if (!name || !db) return;
-                
-                const { error } = await db.from('users').update({ name: name }).eq('phone', currentUser.phone);
-                if (!error) {
-                    document.getElementById('user-name').textContent = name;
-                    showMessage('Name saved! Tars will call you ' + name + ' now.', 'success');
-                } else {
-                    showMessage('Error saving name', 'error');
-                }
-            }
-            
-            async function saveRules() {
-                const rules = document.getElementById('rules-input').value;
-                if (!currentUser || !currentUser.phone) {
-                    showMessage('Please log in first', 'error');
-                    return;
-                }
-                
-                try {
-                    const res = await fetch('http://62.210.193.63:3000/save-preferences', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ phone: currentUser.phone, personality_rules: rules })
-                    });
-                    const data = await res.json();
-                    if (data.success) {
-                        showMessage('Rules saved! Tars will use these in your chats.', 'success');
-                    } else {
-                        showMessage('Error: ' + (data.error || 'Failed to save'), 'error');
-                    }
-                } catch (err) {
-                    showMessage('Failed to save rules', 'error');
-                }
-            }
-            
-            function connectGoogle() {
-                if (!currentUser || !currentUser.phone) {
-                    showMessage('Please log in first', 'error');
-                    return;
-                }
-                window.location.href = 'http://62.210.193.63:3000/auth/google?phone=' + encodeURIComponent(currentUser.phone);
-            }
-            
-            async function checkIntegrations() {
-                if (!currentUser || !currentUser.phone) return;
-                try {
-                    const res = await fetch('http://62.210.193.63:3000/integrations', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ phone: currentUser.phone })
-                    });
-                    const data = await res.json();
-                    if (data.integrations) {
-                        data.integrations.forEach(function(int) {
-                            if (int.provider === 'google') {
-                                document.getElementById('gcal-status').textContent = 'Connected';
-                                document.getElementById('gcal-status').classList.remove('disconnected');
-                                document.getElementById('gcal-status').classList.add('connected');
-                                document.getElementById('gcal-btn').textContent = 'Connected as ' + (int.email || 'Google');
-                                document.getElementById('gcal-btn').disabled = true;
-                            }
-                        });
-                    }
-                } catch (err) {
-                    console.error('Failed to check integrations:', err);
-                }
-            }
-            
-            function checkUrlParams() {
-                const params = new URLSearchParams(window.location.search);
-                if (params.get('google') === 'connected') {
-                    showMessage('Google Workspace connected successfully! 🎉', 'success');
-                    window.history.replaceState({}, '', window.location.pathname);
-                }
-                if (params.get('error')) {
-                    showMessage('Connection failed: ' + params.get('error'), 'error');
-                    window.history.replaceState({}, '', window.location.pathname);
-                }
-            }
-            
-            function logout() {
-                localStorage.removeItem('tars_user');
-                currentUser = null;
-                document.getElementById('login-screen').style.display = 'flex';
-                document.getElementById('dashboard').classList.remove('active');
-                document.getElementById('phone-input').value = '';
-                backToPhone();
-            }
-            
-            document.addEventListener('DOMContentLoaded', function() {
-                if (window.supabase) {
-                    db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-                }
-                
-                const saved = localStorage.getItem('tars_user');
-                if (saved) {
-                    currentUser = JSON.parse(saved);
-                    loadDashboard();
-                }
-                
-                document.getElementById('send-code-btn').addEventListener('click', sendCode);
-                document.getElementById('verify-btn').addEventListener('click', verifyCode);
-                document.getElementById('resend-btn').addEventListener('click', resendCode);
-                document.getElementById('back-btn').addEventListener('click', backToPhone);
-                document.getElementById('cooldown-back-btn').addEventListener('click', backToPhone);
-                document.getElementById('logout-btn').addEventListener('click', logout);
-                document.getElementById('save-name-btn').addEventListener('click', saveName);
-                document.getElementById('save-rules-btn').addEventListener('click', saveRules);
-                document.getElementById('gcal-btn').addEventListener('click', function() {
-                    connectGoogle();
-                });
-                document.getElementById('github-btn').addEventListener('click', function() {
-                    showMessage('GitHub integration coming soon!', 'info');
-                });
-                
-                // Auto-submit on 6 digits
-                document.getElementById('code-input').addEventListener('input', function(e) {
-                    if (e.target.value.length === 6) {
-                        verifyCode();
-                    }
-                });
-            });
-        })();
-    </script>
+    <div id="message-container"></div>
+
+    <div class="user-info" id="user-info">
+      <div class="user-avatar">👤</div>
+      <div class="user-details">
+        <h3 id="user-phone">Loading...</h3>
+        <p>Member since <span id="user-since">...</span></p>
+      </div>
+      <span class="plan-badge" id="plan-badge">Free</span>
+    </div>
+
+    <div class="section-title">Connected Accounts</div>
+    
+    <div class="integrations">
+      <div class="integration-card" id="google-card">
+        <div class="integration-icon google">G</div>
+        <div class="integration-info">
+          <h3>Google Account</h3>
+          <p>Calendar, Gmail, Contacts</p>
+          <div class="integration-status" id="google-status">
+            <span class="status-dot"></span>
+            <span>Not connected</span>
+          </div>
+        </div>
+        <a href="#" class="btn btn-connect" id="google-btn" onclick="connectGoogle()">Connect</a>
+      </div>
+
+      <div class="integration-card" id="github-card">
+        <div class="integration-icon github">🐙</div>
+        <div class="integration-info">
+          <h3>GitHub</h3>
+          <p>Repositories, issues, code</p>
+          <div class="integration-status" id="github-status">
+            <span class="status-dot"></span>
+            <span>Not connected</span>
+          </div>
+        </div>
+        <a href="#" class="btn btn-connect" id="github-btn" onclick="connectGithub()">Connect</a>
+      </div>
+
+      <div class="integration-card" id="contacts-card">
+        <div class="integration-icon" style="background: linear-gradient(135deg, #34d399, #10b981);">📱</div>
+        <div class="integration-info">
+          <h3>iPhone Contacts</h3>
+          <p>Search your phone contacts</p>
+          <div class="integration-status" id="contacts-status">
+            <span class="status-dot"></span>
+            <span id="contacts-count">Not synced</span>
+          </div>
+        </div>
+        <a href="#" class="btn btn-connect" id="contacts-btn" onclick="syncContacts()">Sync</a>
+      </div>
+    </div>
+
+    <div class="section-title">Customize Tars</div>
+    
+    <div class="personality-section">
+      <div class="personality-card">
+        <h3>🎭 Personality</h3>
+        
+        <div class="slider-group">
+          <label>Communication Style</label>
+          <div class="slider-labels">
+            <span>Casual</span>
+            <span>Formal</span>
+          </div>
+          <input type="range" min="0" max="100" value="30" class="slider" id="formality-slider">
+        </div>
+        
+        <div class="slider-group">
+          <label>Response Length</label>
+          <div class="slider-labels">
+            <span>Concise</span>
+            <span>Detailed</span>
+          </div>
+          <input type="range" min="0" max="100" value="50" class="slider" id="length-slider">
+        </div>
+        
+        <div class="toggle-group">
+          <label class="toggle-item">
+            <span>Use emojis 😊</span>
+            <input type="checkbox" id="emoji-toggle" checked>
+            <span class="toggle-switch"></span>
+          </label>
+          
+          <label class="toggle-item">
+            <span>Remember my name</span>
+            <input type="checkbox" id="name-toggle" checked>
+            <span class="toggle-switch"></span>
+          </label>
+          
+          <label class="toggle-item">
+            <span>Proactive suggestions</span>
+            <input type="checkbox" id="proactive-toggle">
+            <span class="toggle-switch"></span>
+          </label>
+        </div>
+      </div>
+      
+      <div class="personality-card">
+        <h3>📝 Custom Instructions</h3>
+        <p class="helper-text">Tell Tars anything specific about how you want it to behave:</p>
+        <textarea id="custom-instructions" placeholder="e.g., 'Call me Chief', 'I'm a software developer', 'Always give me options before making decisions'..."></textarea>
+        <button class="btn btn-primary save-btn" onclick="savePersonality()">Save Preferences</button>
+      </div>
+    </div>
+
+    <div class="section-title">What Tars Can Do</div>
+    
+    <div class="capabilities">
+      <div class="capability-card">
+        <h4>📅 Calendar</h4>
+        <p>"What's on my calendar today?" • "Schedule a meeting for tomorrow at 2pm"</p>
+      </div>
+      <div class="capability-card">
+        <h4>📧 Email</h4>
+        <p>"Check my unread emails" • "Draft a reply to John's email"</p>
+      </div>
+      <div class="capability-card">
+        <h4>🎨 Images</h4>
+        <p>"Generate an image of..." • Send any photo for analysis</p>
+      </div>
+      <div class="capability-card">
+        <h4>💻 Coding</h4>
+        <p>"Build me a script that..." • "Explain this code"</p>
+      </div>
+      <div class="capability-card">
+        <h4>💬 Chat</h4>
+        <p>Ask anything! Tars remembers your conversation.</p>
+      </div>
+    </div>
+
+    <div class="help-text">
+      Need help? Just text <strong>"help"</strong> to Tars.<br>
+      <a href="/">← Back to home</a>
+    </div>
+  </div>
+
+  <script>
+    // Get token from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+    const message = urlParams.get('message');
+    const apiBase = "http://62.210.193.63:3001";
+
+    // Show message if present
+    if (message) {
+      const container = document.getElementById('message-container');
+      const isError = urlParams.get('error') === 'true';
+      container.innerHTML = `<div class="${isError ? 'error-message' : 'success-message'}">${decodeURIComponent(message)}</div>`;
+    }
+
+    // Load user data
+    async function loadUserData() {
+      if (!token) {
+        document.getElementById('user-phone').textContent = 'Invalid link';
+        return;
+      }
+
+      try {
+        const response = await fetch(`${apiBase}/api/portal/user?token=${token}`);
+        const data = await response.json();
+
+        if (data.error) {
+          document.getElementById('user-phone').textContent = 'Link expired';
+          return;
+        }
+
+        // Update user info
+        document.getElementById('user-phone').textContent = formatPhone(data.phone);
+        document.getElementById('user-since').textContent = formatDate(data.created_at);
+        
+        const badge = document.getElementById('plan-badge');
+        if (data.subscription === 'pro') {
+          badge.textContent = 'Pro';
+          badge.classList.add('pro');
+        } else {
+          badge.textContent = 'Free';
+        }
+
+        // Update integrations
+        updateIntegrationStatus('google', data.integrations?.google);
+        updateIntegrationStatus('github', data.integrations?.github);
+
+      } catch (err) {
+        console.error('Failed to load user data:', err);
+        document.getElementById('user-phone').textContent = 'Error loading data';
+      }
+    }
+
+    function updateIntegrationStatus(service, integration) {
+      const card = document.getElementById(`${service}-card`);
+      const status = document.getElementById(`${service}-status`);
+      const btn = document.getElementById(`${service}-btn`);
+
+      if (integration?.connected) {
+        card.classList.add('connected');
+        status.classList.add('connected');
+        status.innerHTML = `<span class="status-dot connected"></span><span>Connected${integration.email ? ` as ${integration.email}` : ''}</span>`;
+        btn.textContent = 'Disconnect';
+        btn.className = 'btn btn-disconnect';
+        btn.onclick = () => disconnect(service);
+      } else {
+        card.classList.remove('connected');
+        status.classList.remove('connected');
+        status.innerHTML = `<span class="status-dot"></span><span>Not connected</span>`;
+        btn.textContent = 'Connect';
+        btn.className = 'btn btn-connect';
+        btn.onclick = () => connect(service);
+      }
+    }
+
+    function connect(service) {
+      window.location.href = `${apiBase}/api/portal/connect/${service}?token=${token}`;
+    }
+
+    function disconnect(service) {
+      if (confirm(`Disconnect ${service}? Tars won't be able to access your ${service} data anymore.`)) {
+        window.location.href = `${apiBase}/api/portal/disconnect/${service}?token=${token}`;
+      }
+    }
+
+    function connectGoogle() { connect('google'); }
+    function connectGithub() { connect('github'); }
+
+    // iPhone Contacts sync via iOS Shortcut
+    async function syncContacts() {
+      try {
+        const response = await fetch(`${apiBase}/api/portal/contacts/shortcut?token=${token}`);
+        const data = await response.json();
+        
+        if (data.error) {
+          alert('Error: ' + data.error);
+          return;
+        }
+
+        // Create and show modal with instructions
+        const modal = document.createElement('div');
+        modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px;';
+        modal.innerHTML = `
+          <div style="background:#1a1a2e;border-radius:16px;padding:24px;max-width:400px;width:100%;">
+            <h3 style="margin-bottom:16px;font-size:1.2rem;">📱 Sync iPhone Contacts</h3>
+            <p style="color:#94a3b8;margin-bottom:16px;font-size:0.9rem;">To sync your contacts, create an iOS Shortcut:</p>
+            <ol style="color:#94a3b8;font-size:0.85rem;padding-left:20px;margin-bottom:20px;">
+              <li style="margin-bottom:8px;">Open <strong>Shortcuts</strong> app on iPhone</li>
+              <li style="margin-bottom:8px;">Tap <strong>+</strong> to create new shortcut</li>
+              <li style="margin-bottom:8px;">Add action: <strong>"Find All Contacts"</strong></li>
+              <li style="margin-bottom:8px;">Add action: <strong>"Repeat with Each"</strong></li>
+              <li style="margin-bottom:8px;">Inside repeat: Add <strong>"Get Details of Contact"</strong> (Name, Phone, Email)</li>
+              <li style="margin-bottom:8px;">Add <strong>"Add to Variable"</strong> (name it "contacts")</li>
+              <li style="margin-bottom:8px;">After repeat: Add <strong>"Get Contents of URL"</strong></li>
+              <li style="margin-bottom:8px;">Set URL to: <code style="background:#0a0a0f;padding:2px 6px;border-radius:4px;font-size:0.75rem;">${data.uploadUrl}</code></li>
+              <li style="margin-bottom:8px;">Method: POST, Body: JSON with {"contacts": Variable}</li>
+              <li>Run the shortcut!</li>
+            </ol>
+            <div style="display:flex;gap:12px;">
+              <button onclick="this.parentElement.parentElement.parentElement.remove()" style="flex:1;padding:12px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:white;cursor:pointer;">Close</button>
+              <button onclick="copyUploadUrl('${data.uploadUrl}')" style="flex:1;padding:12px;border-radius:8px;border:none;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;cursor:pointer;">Copy URL</button>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(modal);
+        modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+      } catch (err) {
+        console.error('Sync contacts error:', err);
+        alert('Failed to get sync instructions');
+      }
+    }
+
+    function copyUploadUrl(url) {
+      navigator.clipboard.writeText(url).then(() => {
+        alert('URL copied! Paste it in your iOS Shortcut.');
+      });
+    }
+
+    async function loadContactsStatus() {
+      try {
+        const response = await fetch(`${apiBase}/api/portal/contacts/status?token=${token}`);
+        const data = await response.json();
+        
+        const card = document.getElementById('contacts-card');
+        const status = document.getElementById('contacts-status');
+        const countSpan = document.getElementById('contacts-count');
+        const btn = document.getElementById('contacts-btn');
+        
+        if (data.synced && data.count > 0) {
+          card.classList.add('connected');
+          status.classList.add('connected');
+          countSpan.textContent = `${data.count} contacts synced`;
+          btn.textContent = 'Re-sync';
+        } else {
+          countSpan.textContent = 'Not synced';
+        }
+      } catch (err) {
+        console.error('Load contacts status error:', err);
+      }
+    }
+
+    function formatPhone(phone) {
+      if (!phone) return 'Unknown';
+      // Format: +1 (407) 620-3717
+      const cleaned = phone.replace(/\D/g, '');
+      if (cleaned.length === 11 && cleaned[0] === '1') {
+        return `+1 (${cleaned.slice(1,4)}) ${cleaned.slice(4,7)}-${cleaned.slice(7)}`;
+      }
+      return phone;
+    }
+
+    function formatDate(dateStr) {
+      if (!dateStr) return 'Unknown';
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    }
+
+    // Save personality preferences
+    async function savePersonality() {
+      const preferences = {
+        formality: document.getElementById('formality-slider').value,
+        responseLength: document.getElementById('length-slider').value,
+        useEmojis: document.getElementById('emoji-toggle').checked,
+        rememberName: document.getElementById('name-toggle').checked,
+        proactiveSuggestions: document.getElementById('proactive-toggle').checked,
+        customInstructions: document.getElementById('custom-instructions').value
+      };
+
+      try {
+        const response = await fetch(`${apiBase}/api/portal/preferences?token=${token}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(preferences)
+        });
+
+        if (response.ok) {
+          alert('Preferences saved! ✨');
+        } else {
+          alert('Failed to save preferences');
+        }
+      } catch (err) {
+        console.error('Save error:', err);
+        alert('Failed to save preferences');
+      }
+    }
+
+    // Load personality preferences
+    async function loadPreferences() {
+      try {
+        const response = await fetch(`${apiBase}/api/portal/preferences?token=${token}`);
+        if (response.ok) {
+          const prefs = await response.json();
+          if (prefs.formality) document.getElementById('formality-slider').value = prefs.formality;
+          if (prefs.responseLength) document.getElementById('length-slider').value = prefs.responseLength;
+          if (prefs.useEmojis !== undefined) document.getElementById('emoji-toggle').checked = prefs.useEmojis;
+          if (prefs.rememberName !== undefined) document.getElementById('name-toggle').checked = prefs.rememberName;
+          if (prefs.proactiveSuggestions !== undefined) document.getElementById('proactive-toggle').checked = prefs.proactiveSuggestions;
+          if (prefs.customInstructions) document.getElementById('custom-instructions').value = prefs.customInstructions;
+        }
+      } catch (err) {
+        console.error('Load preferences error:', err);
+      }
+    }
+
+    // Load data on page load
+    loadUserData();
+    loadPreferences();
+    loadContactsStatus();
+  </script>
 </body>
 </html>
