@@ -45,6 +45,8 @@
             background: rgba(0,0,0,0.3);
             color: #fff;
             font-size: 1rem;
+            text-align: center;
+            letter-spacing: 0.2em;
         }
         .input-group input:focus { outline: none; border-color: #6366f1; }
         .btn {
@@ -60,10 +62,19 @@
             transition: all 0.2s;
             width: 100%;
         }
-        .btn:hover { background: #4f46e5; transform: translateY(-1px); }
+        .btn:hover:not(:disabled) { background: #4f46e5; transform: translateY(-1px); }
         .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
         .btn-secondary { background: rgba(255,255,255,0.1); margin-top: 0.5rem; }
-        .btn-secondary:hover { background: rgba(255,255,255,0.2); }
+        .btn-secondary:hover:not(:disabled) { background: rgba(255,255,255,0.2); }
+        .btn-link { 
+            background: none; 
+            color: #94a3b8; 
+            text-decoration: underline;
+            font-size: 0.9rem;
+            margin-top: 1rem;
+            padding: 0.5rem;
+        }
+        .btn-link:hover { color: #fff; }
         .dashboard { display: none; }
         .dashboard.active { display: block; }
         .header { 
@@ -93,21 +104,9 @@
             margin-bottom: 1rem;
             border: 1px solid rgba(255,255,255,0.1);
         }
-        .card h2 { 
-            font-size: 1.2rem; 
-            margin-bottom: 0.75rem; 
-            display: flex; 
-            align-items: center; 
-            gap: 0.5rem; 
-        }
+        .card h2 { font-size: 1.2rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem; }
         .card p { color: #94a3b8; margin-bottom: 1rem; font-size: 0.95rem; }
-        .status {
-            display: inline-block;
-            padding: 0.25rem 0.75rem;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            margin-left: 0.5rem;
-        }
+        .status { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.8rem; margin-left: 0.5rem; }
         .status.connected { background: #059669; }
         .status.disconnected { background: #4b5563; }
         textarea {
@@ -133,7 +132,10 @@
         .message.success { background: rgba(5, 150, 105, 0.2); border: 1px solid #059669; }
         .message.error { background: rgba(220, 38, 38, 0.2); border: 1px solid #dc2626; }
         .message.info { background: rgba(59, 130, 246, 0.2); border: 1px solid #3b82f6; }
+        .message.warning { background: rgba(245, 158, 11, 0.2); border: 1px solid #f59e0b; }
         .hidden { display: none !important; }
+        .timer { color: #94a3b8; font-size: 0.85rem; margin-top: 0.5rem; }
+        .resend-area { margin-top: 1rem; text-align: center; }
     </style>
 </head>
 <body>
@@ -148,7 +150,7 @@
                 </p>
                 <div class="input-group">
                     <label>Phone Number</label>
-                    <input type="tel" id="phone-input" placeholder="+1 (555) 123-4567">
+                    <input type="tel" id="phone-input" placeholder="(555) 123-4567" style="letter-spacing: normal; text-align: left;">
                 </div>
                 <div id="phone-error" class="message error hidden"></div>
                 <button class="btn" id="send-code-btn">Send Verification Code</button>
@@ -156,15 +158,27 @@
             <div id="code-step" class="hidden">
                 <h2>Check your messages! 💬</h2>
                 <p style="color: #94a3b8; margin-bottom: 1rem; font-size: 0.9rem;">
-                    Tars just texted you a verification code
+                    Tars just texted you a 6-digit code
                 </p>
                 <div class="input-group">
                     <label>Verification Code</label>
-                    <input type="text" id="code-input" placeholder="123456" maxlength="6">
+                    <input type="text" id="code-input" placeholder="000000" maxlength="6" autocomplete="one-time-code">
                 </div>
                 <div id="code-error" class="message error hidden"></div>
                 <button class="btn" id="verify-btn">Verify & Sign In</button>
+                <div class="resend-area">
+                    <button class="btn btn-link" id="resend-btn" disabled>Resend code</button>
+                    <div id="resend-timer" class="timer"></div>
+                </div>
                 <button class="btn btn-secondary" id="back-btn">← Use different number</button>
+            </div>
+            <div id="cooldown-step" class="hidden">
+                <h2>⏳ Please wait</h2>
+                <p style="color: #94a3b8; margin-bottom: 1rem; font-size: 0.9rem;">
+                    Too many attempts. You can try again in:
+                </p>
+                <div id="cooldown-timer" style="font-size: 2rem; font-weight: bold; margin: 1rem 0;"></div>
+                <button class="btn btn-secondary" id="cooldown-back-btn">← Go back</button>
             </div>
         </div>
     </div>
@@ -183,27 +197,27 @@
                 <h2>👤 Your Profile</h2>
                 <p>What should Tars call you?</p>
                 <div class="input-group">
-                    <input type="text" id="name-input" placeholder="Your name">
+                    <input type="text" id="name-input" placeholder="Your name" style="letter-spacing: normal; text-align: left;">
                 </div>
                 <button class="btn" id="save-name-btn">Save Name</button>
             </div>
             <div class="card">
                 <h2>✨ Personality Rules</h2>
-                <p>Customize how Tars talks to you. These rules apply every time you chat.</p>
+                <p>Customize how Tars talks to you.</p>
                 <textarea id="rules-input" placeholder="Examples:
 • Always be super concise
-• I'm a software engineer, so be technical
+• I'm a software engineer
 • Call me 'boss'"></textarea>
                 <button class="btn" id="save-rules-btn">Save Rules</button>
             </div>
             <div class="card">
                 <h2>📅 Google Calendar <span id="gcal-status" class="status disconnected">Not Connected</span></h2>
-                <p>Let Tars manage your schedule and send you reminders.</p>
+                <p>Let Tars manage your schedule.</p>
                 <button class="btn" id="gcal-btn">Connect Google Calendar</button>
             </div>
             <div class="card">
                 <h2>🐙 GitHub <span id="github-status" class="status disconnected">Not Connected</span></h2>
-                <p>Let Tars help with repos, issues, and pull requests.</p>
+                <p>Let Tars help with code.</p>
                 <button class="btn" id="github-btn">Connect GitHub</button>
             </div>
         </div>
@@ -217,6 +231,8 @@
             
             let db = null;
             let currentUser = null;
+            let resendTimer = null;
+            let cooldownTimer = null;
             
             function formatPhone(phone) {
                 const digits = phone.replace(/\D/g, '');
@@ -231,13 +247,64 @@
                 }
             }
             
+            function formatTime(seconds) {
+                const mins = Math.floor(seconds / 60);
+                const secs = seconds % 60;
+                if (mins > 0) {
+                    return mins + ':' + (secs < 10 ? '0' : '') + secs;
+                }
+                return secs + 's';
+            }
+            
+            function startResendTimer(seconds) {
+                const btn = document.getElementById('resend-btn');
+                const timer = document.getElementById('resend-timer');
+                btn.disabled = true;
+                
+                let remaining = seconds;
+                timer.textContent = 'Resend available in ' + formatTime(remaining);
+                
+                if (resendTimer) clearInterval(resendTimer);
+                resendTimer = setInterval(function() {
+                    remaining--;
+                    if (remaining <= 0) {
+                        clearInterval(resendTimer);
+                        btn.disabled = false;
+                        timer.textContent = '';
+                    } else {
+                        timer.textContent = 'Resend available in ' + formatTime(remaining);
+                    }
+                }, 1000);
+            }
+            
+            function showCooldown(seconds) {
+                document.getElementById('phone-step').classList.add('hidden');
+                document.getElementById('code-step').classList.add('hidden');
+                document.getElementById('cooldown-step').classList.remove('hidden');
+                
+                let remaining = seconds;
+                const timer = document.getElementById('cooldown-timer');
+                timer.textContent = formatTime(remaining);
+                
+                if (cooldownTimer) clearInterval(cooldownTimer);
+                cooldownTimer = setInterval(function() {
+                    remaining--;
+                    if (remaining <= 0) {
+                        clearInterval(cooldownTimer);
+                        backToPhone();
+                    } else {
+                        timer.textContent = formatTime(remaining);
+                    }
+                }, 1000);
+            }
+            
             async function sendCode() {
                 const phone = document.getElementById('phone-input').value;
                 const btn = document.getElementById('send-code-btn');
                 const errorEl = document.getElementById('phone-error');
                 
                 if (phone.replace(/\D/g, '').length < 10) {
-                    errorEl.textContent = 'Please enter a valid phone number';
+                    errorEl.textContent = 'Please enter a valid 10-digit phone number';
                     errorEl.classList.remove('hidden');
                     return;
                 }
@@ -255,9 +322,22 @@
                     
                     const data = await res.json();
                     
+                    if (data.cooldown) {
+                        showCooldown(data.secondsLeft);
+                        return;
+                    }
+                    
+                    if (data.resendDelay) {
+                        errorEl.textContent = 'Please wait ' + data.secondsLeft + ' seconds before requesting another code.';
+                        errorEl.classList.remove('hidden');
+                        return;
+                    }
+                    
                     if (data.success) {
                         document.getElementById('phone-step').classList.add('hidden');
                         document.getElementById('code-step').classList.remove('hidden');
+                        document.getElementById('code-input').focus();
+                        startResendTimer(data.resendAvailableIn || 30);
                     } else {
                         throw new Error(data.error || 'Failed to send code');
                     }
@@ -270,13 +350,57 @@
                 }
             }
             
+            async function resendCode() {
+                const phone = document.getElementById('phone-input').value;
+                const btn = document.getElementById('resend-btn');
+                const errorEl = document.getElementById('code-error');
+                
+                btn.disabled = true;
+                btn.textContent = 'Sending...';
+                
+                try {
+                    const res = await fetch(AUTH_API + '/send-code', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ phone: formatPhone(phone) })
+                    });
+                    
+                    const data = await res.json();
+                    
+                    if (data.cooldown) {
+                        showCooldown(data.secondsLeft);
+                        return;
+                    }
+                    
+                    if (data.success) {
+                        errorEl.textContent = 'New code sent!';
+                        errorEl.classList.remove('hidden');
+                        errorEl.classList.remove('error');
+                        errorEl.classList.add('success');
+                        startResendTimer(data.resendAvailableIn || 30);
+                        setTimeout(function() {
+                            errorEl.classList.add('hidden');
+                            errorEl.classList.remove('success');
+                            errorEl.classList.add('error');
+                        }, 3000);
+                    } else {
+                        throw new Error(data.error);
+                    }
+                } catch (err) {
+                    errorEl.textContent = err.message;
+                    errorEl.classList.remove('hidden');
+                } finally {
+                    btn.textContent = 'Resend code';
+                }
+            }
+            
             async function verifyCode() {
                 const phone = formatPhone(document.getElementById('phone-input').value);
-                const code = document.getElementById('code-input').value;
+                const code = document.getElementById('code-input').value.trim();
                 const btn = document.getElementById('verify-btn');
                 const errorEl = document.getElementById('code-error');
                 
-                if (code.length !== 6) {
+                if (code.length !== 6 || !/^\d+$/.test(code)) {
                     errorEl.textContent = 'Please enter the 6-digit code';
                     errorEl.classList.remove('hidden');
                     return;
@@ -295,13 +419,22 @@
                     
                     const data = await res.json();
                     
+                    if (data.cooldown) {
+                        showCooldown(data.secondsLeft);
+                        return;
+                    }
+                    
                     if (data.success) {
                         currentUser = { phone: data.phone };
                         localStorage.setItem('tars_user', JSON.stringify(currentUser));
                         await ensureUser(data.phone);
                         loadDashboard();
                     } else {
-                        throw new Error(data.error || 'Invalid code');
+                        errorEl.textContent = data.error || 'Invalid code';
+                        errorEl.classList.remove('hidden');
+                        if (data.attemptsLeft !== undefined) {
+                            errorEl.textContent += ' (' + data.attemptsLeft + ' attempts left)';
+                        }
                     }
                 } catch (err) {
                     errorEl.textContent = err.message;
@@ -313,8 +446,11 @@
             }
             
             function backToPhone() {
+                if (resendTimer) clearInterval(resendTimer);
+                if (cooldownTimer) clearInterval(cooldownTimer);
                 document.getElementById('phone-step').classList.remove('hidden');
                 document.getElementById('code-step').classList.add('hidden');
+                document.getElementById('cooldown-step').classList.add('hidden');
                 document.getElementById('code-input').value = '';
                 document.getElementById('code-error').classList.add('hidden');
             }
@@ -323,9 +459,11 @@
                 if (!db) return;
                 const { data: existing } = await db.from('users').select('*').eq('phone', phone).single();
                 if (!existing) {
-                    await db.from('users').insert({ phone: phone });
+                    const { data: newUser } = await db.from('users').insert({ phone: phone }).select().single();
+                    currentUser = newUser || { phone: phone };
+                } else {
+                    currentUser = existing;
                 }
-                currentUser = existing || { phone: phone };
             }
             
             async function loadDashboard() {
@@ -393,24 +531,22 @@
                 backToPhone();
             }
             
-            // Initialize
             document.addEventListener('DOMContentLoaded', function() {
-                // Initialize Supabase
                 if (window.supabase) {
                     db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
                 }
                 
-                // Check saved login
                 const saved = localStorage.getItem('tars_user');
                 if (saved) {
                     currentUser = JSON.parse(saved);
                     loadDashboard();
                 }
                 
-                // Attach event listeners
                 document.getElementById('send-code-btn').addEventListener('click', sendCode);
                 document.getElementById('verify-btn').addEventListener('click', verifyCode);
+                document.getElementById('resend-btn').addEventListener('click', resendCode);
                 document.getElementById('back-btn').addEventListener('click', backToPhone);
+                document.getElementById('cooldown-back-btn').addEventListener('click', backToPhone);
                 document.getElementById('logout-btn').addEventListener('click', logout);
                 document.getElementById('save-name-btn').addEventListener('click', saveName);
                 document.getElementById('save-rules-btn').addEventListener('click', saveRules);
@@ -419,6 +555,13 @@
                 });
                 document.getElementById('github-btn').addEventListener('click', function() {
                     showMessage('GitHub integration coming soon!', 'info');
+                });
+                
+                // Auto-submit on 6 digits
+                document.getElementById('code-input').addEventListener('input', function(e) {
+                    if (e.target.value.length === 6) {
+                        verifyCode();
+                    }
                 });
             });
         })();
