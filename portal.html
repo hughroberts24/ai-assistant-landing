@@ -523,20 +523,25 @@
             
             async function saveRules() {
                 const rules = document.getElementById('rules-input').value;
-                if (!db || !currentUser.id) {
-                    showMessage('Please save your name first', 'info');
+                if (!currentUser || !currentUser.phone) {
+                    showMessage('Please log in first', 'error');
                     return;
                 }
                 
-                const { error } = await db.from('preferences').upsert({ 
-                    user_id: currentUser.id, 
-                    personality_rules: rules
-                });
-                
-                if (!error) {
-                    showMessage('Rules saved! Tars will use these in your chats.', 'success');
-                } else {
-                    showMessage('Error saving rules', 'error');
+                try {
+                    const res = await fetch('http://62.210.193.63:3000/save-preferences', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ phone: currentUser.phone, personality_rules: rules })
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        showMessage('Rules saved! Tars will use these in your chats.', 'success');
+                    } else {
+                        showMessage('Error: ' + (data.error || 'Failed to save'), 'error');
+                    }
+                } catch (err) {
+                    showMessage('Failed to save rules', 'error');
                 }
             }
             
