@@ -65,8 +65,8 @@
             width: 100%;
         }
         .btn:hover { background: #4f46e5; transform: translateY(-1px); }
-        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        .btn-secondary { background: rgba(255,255,255,0.1); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .btn-secondary { background: rgba(255,255,255,0.1); margin-top: 0.5rem; }
         .btn-secondary:hover { background: rgba(255,255,255,0.2); }
         
         /* Dashboard */
@@ -146,8 +146,10 @@
         }
         .message.success { background: rgba(5, 150, 105, 0.2); border: 1px solid #059669; }
         .message.error { background: rgba(220, 38, 38, 0.2); border: 1px solid #dc2626; }
+        .message.info { background: rgba(59, 130, 246, 0.2); border: 1px solid #3b82f6; }
         
         .hidden { display: none !important; }
+        .loading { opacity: 0.7; pointer-events: none; }
     </style>
 </head>
 <body>
@@ -166,20 +168,22 @@
                     <label>Phone Number</label>
                     <input type="tel" id="phone-input" placeholder="+1 (555) 123-4567">
                 </div>
-                <button class="btn" onclick="sendCode()">Send Verification Code</button>
+                <div id="phone-error" class="message error hidden"></div>
+                <button class="btn" id="send-code-btn" onclick="sendCode()">Send Verification Code</button>
             </div>
             
             <div id="code-step" class="hidden">
-                <h2>Enter verification code</h2>
+                <h2>Check your messages! 💬</h2>
                 <p style="color: #94a3b8; margin-bottom: 1rem; font-size: 0.9rem;">
-                    We sent a code to <span id="phone-display"></span>
+                    Tars just texted you a verification code
                 </p>
                 <div class="input-group">
                     <label>Verification Code</label>
                     <input type="text" id="code-input" placeholder="123456" maxlength="6">
                 </div>
-                <button class="btn" onclick="verifyCode()">Verify & Sign In</button>
-                <button class="btn btn-secondary" style="margin-top: 0.5rem;" onclick="backToPhone()">Back</button>
+                <div id="code-error" class="message error hidden"></div>
+                <button class="btn" id="verify-btn" onclick="verifyCode()">Verify & Sign In</button>
+                <button class="btn btn-secondary" onclick="backToPhone()">← Use different number</button>
             </div>
         </div>
     </div>
@@ -189,8 +193,8 @@
         <div class="container">
             <div class="header">
                 <div>
-                    <h1>Welcome, <span id="user-name">there</span>!</h1>
-                    <p class="user-info">Manage your Tars AI settings</p>
+                    <h1>Hey, <span id="user-name">there</span>! 👋</h1>
+                    <p class="user-info" id="user-phone"></p>
                 </div>
                 <button class="logout-btn" onclick="logout()">Sign Out</button>
             </div>
@@ -200,9 +204,9 @@
             <!-- Profile Card -->
             <div class="card">
                 <h2>👤 Your Profile</h2>
+                <p>What should Tars call you?</p>
                 <div class="input-group">
-                    <label>Your Name</label>
-                    <input type="text" id="name-input" placeholder="What should Tars call you?">
+                    <input type="text" id="name-input" placeholder="Your name">
                 </div>
                 <button class="btn" onclick="saveName()">Save Name</button>
             </div>
@@ -210,34 +214,36 @@
             <!-- Personality Rules -->
             <div class="card">
                 <h2>✨ Personality Rules</h2>
-                <p>Customize how Tars responds to you. Add any preferences or context.</p>
+                <p>Customize how Tars talks to you. These rules apply every time you chat.</p>
                 <textarea id="rules-input" placeholder="Examples:
-• Always be concise
-• Remind me about my daily standup at 9am
-• I'm a software engineer who uses Python
-• Call me 'boss'"></textarea>
+• Always be super concise
+• I'm a software engineer, so be technical
+• Remind me to drink water
+• Call me 'boss'
+• I prefer bullet points over paragraphs"></textarea>
                 <button class="btn" onclick="saveRules()">Save Rules</button>
             </div>
             
             <!-- Google Calendar -->
             <div class="card">
                 <h2>📅 Google Calendar <span id="gcal-status" class="status disconnected">Not Connected</span></h2>
-                <p>Connect your calendar to let Tars manage your schedule and send reminders.</p>
+                <p>Let Tars manage your schedule and send you reminders.</p>
                 <button class="btn" id="gcal-btn" onclick="connectGoogle()">Connect Google Calendar</button>
             </div>
             
             <!-- GitHub -->
             <div class="card">
                 <h2>🐙 GitHub <span id="github-status" class="status disconnected">Not Connected</span></h2>
-                <p>Connect GitHub to let Tars help with repositories, issues, and pull requests.</p>
+                <p>Let Tars help with repos, issues, and pull requests.</p>
                 <button class="btn" id="github-btn" onclick="connectGitHub()">Connect GitHub</button>
             </div>
         </div>
     </div>
 
     <script>
-        // Supabase config - will be replaced with actual values
-        const SUPABASE_URL = 'https://uqkcpbtpwwhamrqivudj.supabase.com';
+        // Config
+        const AUTH_API = 'http://62.210.193.63:3000';
+        const SUPABASE_URL = 'https://uqkcpbtpwwhamrqivudj.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_ESkDkX8sh2zMi3-8j_8jmA_i4AiAqty';
         
         let supabase;
@@ -245,98 +251,161 @@
         
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
-            if (SUPABASE_URL !== 'https://uqkcpbtpwwhamrqivudj.supabase.com') {
-                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-                checkAuth();
+            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            
+            // Check if user is already logged in (stored in localStorage)
+            const savedUser = localStorage.getItem('tars_user');
+            if (savedUser) {
+                currentUser = JSON.parse(savedUser);
+                loadDashboard();
             }
         });
         
-        async function checkAuth() {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session) {
-                currentUser = session.user;
-                await loadDashboard();
-            }
+        function formatPhone(phone) {
+            const digits = phone.replace(/\D/g, '');
+            return '+' + (digits.startsWith('1') ? digits : '1' + digits);
         }
         
         async function sendCode() {
-            const phone = document.getElementById('phone-input').value.replace(/\D/g, '');
-            if (phone.length < 10) {
-                alert('Please enter a valid phone number');
+            const phone = document.getElementById('phone-input').value;
+            const btn = document.getElementById('send-code-btn');
+            const errorEl = document.getElementById('phone-error');
+            
+            if (phone.replace(/\D/g, '').length < 10) {
+                errorEl.textContent = 'Please enter a valid phone number';
+                errorEl.classList.remove('hidden');
                 return;
             }
             
-            const formattedPhone = '+' + (phone.startsWith('1') ? phone : '1' + phone);
+            errorEl.classList.add('hidden');
+            btn.disabled = true;
+            btn.textContent = 'Sending...';
             
             try {
-                const { error } = await supabase.auth.signInWithOtp({
-                    phone: formattedPhone
+                const res = await fetch(AUTH_API + '/send-code', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone: formatPhone(phone) })
                 });
                 
-                if (error) throw error;
+                const data = await res.json();
                 
-                document.getElementById('phone-step').classList.add('hidden');
-                document.getElementById('code-step').classList.remove('hidden');
-                document.getElementById('phone-display').textContent = formattedPhone;
+                if (data.success) {
+                    document.getElementById('phone-step').classList.add('hidden');
+                    document.getElementById('code-step').classList.remove('hidden');
+                } else {
+                    throw new Error(data.error || 'Failed to send code');
+                }
             } catch (err) {
-                alert('Error sending code: ' + err.message);
+                errorEl.textContent = err.message;
+                errorEl.classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Send Verification Code';
             }
         }
         
         async function verifyCode() {
-            const phone = document.getElementById('phone-input').value.replace(/\D/g, '');
-            const formattedPhone = '+' + (phone.startsWith('1') ? phone : '1' + phone);
+            const phone = formatPhone(document.getElementById('phone-input').value);
             const code = document.getElementById('code-input').value;
+            const btn = document.getElementById('verify-btn');
+            const errorEl = document.getElementById('code-error');
+            
+            if (code.length !== 6) {
+                errorEl.textContent = 'Please enter the 6-digit code';
+                errorEl.classList.remove('hidden');
+                return;
+            }
+            
+            errorEl.classList.add('hidden');
+            btn.disabled = true;
+            btn.textContent = 'Verifying...';
             
             try {
-                const { data, error } = await supabase.auth.verifyOtp({
-                    phone: formattedPhone,
-                    token: code,
-                    type: 'sms'
+                const res = await fetch(AUTH_API + '/verify-code', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone, code })
                 });
                 
-                if (error) throw error;
+                const data = await res.json();
                 
-                currentUser = data.user;
-                await loadDashboard();
+                if (data.success) {
+                    // Login successful!
+                    currentUser = { phone: data.phone };
+                    localStorage.setItem('tars_user', JSON.stringify(currentUser));
+                    
+                    // Create or fetch user in Supabase
+                    await ensureUser(data.phone);
+                    
+                    loadDashboard();
+                } else {
+                    throw new Error(data.error || 'Invalid code');
+                }
             } catch (err) {
-                alert('Error verifying code: ' + err.message);
+                errorEl.textContent = err.message;
+                errorEl.classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Verify & Sign In';
             }
+        }
+        
+        async function ensureUser(phone) {
+            // Check if user exists
+            const { data: existing } = await supabase
+                .from('users')
+                .select('*')
+                .eq('phone', phone)
+                .single();
+            
+            if (!existing) {
+                // Create new user
+                await supabase.from('users').insert({ phone });
+            }
+            
+            currentUser = existing || { phone };
         }
         
         function backToPhone() {
             document.getElementById('phone-step').classList.remove('hidden');
             document.getElementById('code-step').classList.add('hidden');
+            document.getElementById('code-input').value = '';
+            document.getElementById('code-error').classList.add('hidden');
         }
         
         async function loadDashboard() {
             document.getElementById('login-screen').style.display = 'none';
             document.getElementById('dashboard').classList.add('active');
+            document.getElementById('user-phone').textContent = currentUser.phone;
             
-            // Load user preferences
+            // Load user data
+            const { data: user } = await supabase
+                .from('users')
+                .select('*')
+                .eq('phone', currentUser.phone)
+                .single();
+            
+            if (user) {
+                currentUser = { ...currentUser, ...user };
+                if (user.name) {
+                    document.getElementById('user-name').textContent = user.name;
+                    document.getElementById('name-input').value = user.name;
+                }
+            }
+            
+            // Load preferences
             const { data: prefs } = await supabase
                 .from('preferences')
                 .select('*')
                 .eq('user_id', currentUser.id)
                 .single();
             
-            if (prefs) {
-                document.getElementById('rules-input').value = prefs.personality_rules || '';
+            if (prefs?.personality_rules) {
+                document.getElementById('rules-input').value = prefs.personality_rules;
             }
             
-            // Load user profile
-            const { data: user } = await supabase
-                .from('users')
-                .select('*')
-                .eq('id', currentUser.id)
-                .single();
-            
-            if (user?.name) {
-                document.getElementById('user-name').textContent = user.name;
-                document.getElementById('name-input').value = user.name;
-            }
-            
-            // Check integrations
+            // Load integrations
             const { data: integrations } = await supabase
                 .from('integrations')
                 .select('*')
@@ -345,75 +414,91 @@
             if (integrations) {
                 integrations.forEach(int => {
                     if (int.provider === 'google_calendar') {
-                        document.getElementById('gcal-status').textContent = 'Connected';
-                        document.getElementById('gcal-status').classList.remove('disconnected');
-                        document.getElementById('gcal-status').classList.add('connected');
-                        document.getElementById('gcal-btn').textContent = 'Disconnect';
+                        setConnected('gcal');
                     }
                     if (int.provider === 'github') {
-                        document.getElementById('github-status').textContent = 'Connected';
-                        document.getElementById('github-status').classList.remove('disconnected');
-                        document.getElementById('github-status').classList.add('connected');
-                        document.getElementById('github-btn').textContent = 'Disconnect';
+                        setConnected('github');
                     }
                 });
             }
         }
         
+        function setConnected(type) {
+            document.getElementById(type + '-status').textContent = 'Connected';
+            document.getElementById(type + '-status').classList.remove('disconnected');
+            document.getElementById(type + '-status').classList.add('connected');
+            document.getElementById(type + '-btn').textContent = 'Disconnect';
+        }
+        
         async function saveName() {
-            const name = document.getElementById('name-input').value;
+            const name = document.getElementById('name-input').value.trim();
+            if (!name) return;
             
             const { error } = await supabase
                 .from('users')
-                .upsert({ id: currentUser.id, phone: currentUser.phone, name: name });
+                .update({ name, updated_at: new Date().toISOString() })
+                .eq('phone', currentUser.phone);
             
             if (!error) {
                 document.getElementById('user-name').textContent = name;
-                showMessage('Name saved!', 'success');
+                showMessage('Name saved! Tars will call you ' + name + ' now.', 'success');
             } else {
-                showMessage('Error saving name', 'error');
+                showMessage('Error saving name: ' + error.message, 'error');
             }
         }
         
         async function saveRules() {
             const rules = document.getElementById('rules-input').value;
             
+            // Get user ID first
+            const { data: user } = await supabase
+                .from('users')
+                .select('id')
+                .eq('phone', currentUser.phone)
+                .single();
+            
+            if (!user) {
+                showMessage('Error: User not found', 'error');
+                return;
+            }
+            
             const { error } = await supabase
                 .from('preferences')
                 .upsert({ 
-                    user_id: currentUser.id, 
+                    user_id: user.id, 
                     personality_rules: rules,
                     updated_at: new Date().toISOString()
-                });
+                }, { onConflict: 'user_id' });
             
             if (!error) {
-                showMessage('Rules saved! Tars will use these next time you chat.', 'success');
+                showMessage('Rules saved! Tars will use these in your chats.', 'success');
             } else {
-                showMessage('Error saving rules', 'error');
+                showMessage('Error saving rules: ' + error.message, 'error');
             }
         }
         
         function connectGoogle() {
-            // TODO: Implement Google OAuth
-            alert('Google Calendar integration coming soon!');
+            showMessage('Google Calendar integration coming soon!', 'info');
         }
         
         function connectGitHub() {
-            // TODO: Implement GitHub OAuth
-            alert('GitHub integration coming soon!');
+            showMessage('GitHub integration coming soon!', 'info');
         }
         
-        async function logout() {
-            await supabase.auth.signOut();
+        function logout() {
+            localStorage.removeItem('tars_user');
             currentUser = null;
             document.getElementById('login-screen').style.display = 'flex';
             document.getElementById('dashboard').classList.remove('active');
+            document.getElementById('phone-input').value = '';
+            document.getElementById('code-input').value = '';
+            backToPhone();
         }
         
         function showMessage(text, type) {
             const area = document.getElementById('message-area');
             area.innerHTML = `<div class="message ${type}">${text}</div>`;
-            setTimeout(() => area.innerHTML = '', 3000);
+            setTimeout(() => area.innerHTML = '', 4000);
         }
     </script>
 </body>
