@@ -453,43 +453,6 @@
 </head>
 <body>
   <div class="container">
-    <!-- Login Screen (shown when no token) -->
-    <div id="login-screen" style="display: none;">
-      <div class="header">
-        <h1>✨ Tars Portal</h1>
-        <p>Sign in to manage your settings</p>
-      </div>
-
-      <div id="login-message"></div>
-
-      <!-- Phone Input Step -->
-      <div id="phone-step" class="personality-card">
-        <h3>📱 Enter your phone number</h3>
-        <p class="helper-text">We'll send you a verification code via text.</p>
-        <input type="tel" id="phone-input" placeholder="+1 (555) 123-4567" 
-          style="width:100%;padding:16px;border-radius:12px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:white;font-size:1.1rem;margin-bottom:16px;">
-        <button class="btn btn-connect save-btn" onclick="sendCode()" id="send-code-btn">Send Code</button>
-      </div>
-
-      <!-- Verification Code Step -->
-      <div id="code-step" class="personality-card" style="display: none;">
-        <h3>🔐 Enter verification code</h3>
-        <p class="helper-text">We sent a 6-digit code to <span id="sent-to-phone"></span></p>
-        <input type="text" id="code-input" placeholder="123456" maxlength="6"
-          style="width:100%;padding:16px;border-radius:12px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:white;font-size:1.5rem;text-align:center;letter-spacing:8px;margin-bottom:16px;">
-        <button class="btn btn-connect save-btn" onclick="verifyCode()" id="verify-btn">Verify</button>
-        <p style="text-align:center;margin-top:16px;">
-          <a href="#" onclick="resendCode()" id="resend-link" style="color:#818cf8;text-decoration:none;">Resend code</a>
-          <span id="resend-timer" style="color:#64748b;"></span>
-        </p>
-        <p style="text-align:center;margin-top:8px;">
-          <a href="#" onclick="backToPhone()" style="color:#64748b;text-decoration:none;">← Use different number</a>
-        </p>
-      </div>
-    </div>
-
-    <!-- Main Portal (shown when authenticated) -->
-    <div id="main-portal" style="display: none;">
     <div class="header">
       <h1>✨ Tars Settings</h1>
       <p>Manage your connected accounts</p>
@@ -631,20 +594,14 @@
       Need help? Just text <strong>"help"</strong> to Tars.<br>
       <a href="/">← Back to home</a>
     </div>
-    </div><!-- end main-portal -->
   </div>
 
   <script>
-    // Get token from URL or localStorage
+    // Get token from URL
     const urlParams = new URLSearchParams(window.location.search);
-    let token = urlParams.get('token') || localStorage.getItem('tars_token');
-    let currentPhone = localStorage.getItem('tars_phone');
+    const token = urlParams.get('token');
     const message = urlParams.get('message');
-    const authBase = "https://crystal-rainbow-donors-spin.trycloudflare.com"; // Auth server via tunnel
     const apiBase = "http://62.210.193.63:3001";
-    
-    let resendTimer = null;
-    let resendSeconds = 0;
 
     // Show message if present
     if (message) {
@@ -862,202 +819,10 @@
       }
     }
 
-    // ========== LOGIN FLOW ==========
-    
-    function showLogin() {
-      document.getElementById('login-screen').style.display = 'block';
-      document.getElementById('main-portal').style.display = 'none';
-    }
-    
-    function showPortal() {
-      document.getElementById('login-screen').style.display = 'none';
-      document.getElementById('main-portal').style.display = 'block';
-    }
-    
-    function showLoginMessage(msg, isError = false) {
-      const container = document.getElementById('login-message');
-      container.innerHTML = `<div class="${isError ? 'error-message' : 'success-message'}">${msg}</div>`;
-      setTimeout(() => container.innerHTML = '', 5000);
-    }
-    
-    async function sendCode() {
-      const phoneInput = document.getElementById('phone-input');
-      const btn = document.getElementById('send-code-btn');
-      const phone = phoneInput.value.trim();
-      
-      if (!phone || phone.length < 10) {
-        showLoginMessage('Please enter a valid phone number', true);
-        return;
-      }
-      
-      btn.textContent = 'Sending...';
-      btn.disabled = true;
-      
-      try {
-        const response = await fetch(`${authBase}/send-code`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone })
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-          currentPhone = phone;
-          localStorage.setItem('tars_phone', phone);
-          document.getElementById('sent-to-phone').textContent = phone;
-          document.getElementById('phone-step').style.display = 'none';
-          document.getElementById('code-step').style.display = 'block';
-          document.getElementById('code-input').focus();
-          startResendTimer(data.resendAvailableIn || 30);
-        } else {
-          showLoginMessage(data.error || 'Failed to send code', true);
-        }
-      } catch (err) {
-        console.error('Send code error:', err);
-        showLoginMessage('Network error. Please try again.', true);
-      } finally {
-        btn.textContent = 'Send Code';
-        btn.disabled = false;
-      }
-    }
-    
-    async function verifyCode() {
-      const codeInput = document.getElementById('code-input');
-      const btn = document.getElementById('verify-btn');
-      const code = codeInput.value.trim();
-      
-      if (!code || code.length !== 6) {
-        showLoginMessage('Please enter the 6-digit code', true);
-        return;
-      }
-      
-      btn.textContent = 'Verifying...';
-      btn.disabled = true;
-      
-      try {
-        const response = await fetch(`${authBase}/verify-code`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone: currentPhone, code })
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-          // Store phone as token (simplified auth)
-          token = data.phone;
-          currentPhone = data.phone;
-          localStorage.setItem('tars_token', data.phone);
-          localStorage.setItem('tars_phone', data.phone);
-          
-          showPortal();
-          loadUserData();
-          loadPreferences();
-          loadContactsStatus();
-        } else {
-          showLoginMessage(data.error || 'Invalid code', true);
-          if (data.noCode || data.expired) {
-            backToPhone();
-          }
-        }
-      } catch (err) {
-        console.error('Verify error:', err);
-        showLoginMessage('Network error. Please try again.', true);
-      } finally {
-        btn.textContent = 'Verify';
-        btn.disabled = false;
-      }
-    }
-    
-    function startResendTimer(seconds) {
-      resendSeconds = seconds;
-      const link = document.getElementById('resend-link');
-      const timer = document.getElementById('resend-timer');
-      
-      link.style.display = 'none';
-      timer.style.display = 'inline';
-      
-      function updateTimer() {
-        if (resendSeconds > 0) {
-          timer.textContent = `(wait ${resendSeconds}s)`;
-          resendSeconds--;
-          resendTimer = setTimeout(updateTimer, 1000);
-        } else {
-          timer.style.display = 'none';
-          link.style.display = 'inline';
-        }
-      }
-      updateTimer();
-    }
-    
-    async function resendCode() {
-      if (resendSeconds > 0) return;
-      await sendCodeToPhone(currentPhone);
-    }
-    
-    async function sendCodeToPhone(phone) {
-      try {
-        const response = await fetch(`${authBase}/send-code`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone })
-        });
-        const data = await response.json();
-        if (data.success) {
-          showLoginMessage('New code sent!');
-          startResendTimer(data.resendAvailableIn || 30);
-        } else {
-          showLoginMessage(data.error || 'Failed to resend', true);
-        }
-      } catch (err) {
-        showLoginMessage('Network error', true);
-      }
-    }
-    
-    function backToPhone() {
-      document.getElementById('phone-step').style.display = 'block';
-      document.getElementById('code-step').style.display = 'none';
-      document.getElementById('code-input').value = '';
-      if (resendTimer) clearTimeout(resendTimer);
-    }
-    
-    // Handle Enter key
-    document.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        if (document.getElementById('phone-step').style.display !== 'none') {
-          sendCode();
-        } else if (document.getElementById('code-step').style.display !== 'none') {
-          verifyCode();
-        }
-      }
-    });
-    
-    // ========== INITIALIZATION ==========
-    
-    // Check for Google OAuth callback
-    if (urlParams.get('google') === 'connected') {
-      const email = urlParams.get('email');
-      setTimeout(() => {
-        alert(`Google connected${email ? ` as ${email}` : ''}! ✨`);
-      }, 500);
-    }
-    
-    // Initialize page
-    if (token && token.startsWith('+')) {
-      // We have a phone token, show portal
-      showPortal();
-      loadUserData();
-      loadPreferences();
-      loadContactsStatus();
-    } else {
-      // No token, show login
-      showLogin();
-      // Pre-fill phone if we have it
-      if (currentPhone) {
-        document.getElementById('phone-input').value = currentPhone;
-      }
-    }
+    // Load data on page load
+    loadUserData();
+    loadPreferences();
+    loadContactsStatus();
   </script>
 </body>
 </html>
