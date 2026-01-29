@@ -211,9 +211,9 @@
                 <button class="btn" id="save-rules-btn">Save Rules</button>
             </div>
             <div class="card">
-                <h2>📅 Google Calendar <span id="gcal-status" class="status disconnected">Not Connected</span></h2>
-                <p>Let Tars manage your schedule.</p>
-                <button class="btn" id="gcal-btn">Connect Google Calendar</button>
+                <h2>🔷 Google Workspace <span id="gcal-status" class="status disconnected">Not Connected</span></h2>
+                <p>Let Tars access your Calendar, Gmail, Docs, Sheets & Drive.</p>
+                <button class="btn" id="gcal-btn">Connect Google Workspace</button>
             </div>
             <div class="card">
                 <h2>🐙 GitHub <span id="github-status" class="status disconnected">Not Connected</span></h2>
@@ -551,7 +551,7 @@
                 document.getElementById('save-name-btn').addEventListener('click', saveName);
                 document.getElementById('save-rules-btn').addEventListener('click', saveRules);
                 document.getElementById('gcal-btn').addEventListener('click', function() {
-                    showMessage('Google Calendar integration coming soon!', 'info');
+                    showMessage('Google Workspace integration coming soon!', 'info');
                 });
                 document.getElementById('github-btn').addEventListener('click', function() {
                     showMessage('GitHub integration coming soon!', 'info');
